@@ -49,7 +49,7 @@ static double as_double(number n)
 static int apply(operation op, number *acc, number x, jd_error *err)
 {
 	if (acc->is_int && x.is_int) {
-		int64_t r;
+		int64_t r = 0;
 		int overflow = 0;
 
 		switch (op) {
