@@ -21,7 +21,7 @@ jobs:
           - { os: ubuntu-latest, cc: clang }
           - { os: macos-latest, cc: clang }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -43,7 +43,7 @@ jobs:
     name: ubuntu-latest / ASan + UBSan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libjson-c-dev pkg-config
@@ -58,7 +58,7 @@ jobs:
     name: make install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libjson-c-dev pkg-config

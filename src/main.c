@@ -270,7 +270,7 @@ int main(int argc, char **argv)
 	const char *dir = "./plugins", *addr = "127.0.0.1";
 	long port = 8080, interval = 1000;
 	struct sigaction sa;
-	char where[NI_MAXHOST + 32];
+	char where[NI_MAXHOST + NI_MAXSERV + 16];
 	long long next_scan;
 	server srv;
 	int opt, i, left;

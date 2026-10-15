@@ -27,11 +27,11 @@ typedef struct number {
 	double d;
 } number;
 
-typedef enum op { OP_ADD, OP_SUB, OP_MUL, OP_DIV } op;
+typedef enum operation { OP_ADD, OP_SUB, OP_MUL, OP_DIV } operation;
 
 static const struct {
 	const char *name;
-	op op;
+	operation op;
 	size_t min_operands;
 	const char *help;
 } methods[] = {
@@ -46,7 +46,7 @@ static double as_double(number n)
 	return n.is_int ? (double)n.i : n.d;
 }
 
-static int apply(op op, number *acc, number x, jd_error *err)
+static int apply(operation op, number *acc, number x, jd_error *err)
 {
 	if (acc->is_int && x.is_int) {
 		int64_t r;
