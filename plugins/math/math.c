@@ -92,9 +92,11 @@ static int to_number(json_object *value, size_t index, number *out, jd_error *er
 	case json_type_int:
 		out->is_int = 1;
 		out->i = json_object_get_int64(value);
+		out->d = 0;
 		return 0;
 	case json_type_double:
 		out->is_int = 0;
+		out->i = 0;
 		out->d = json_object_get_double(value);
 		return 0;
 	default:
@@ -139,7 +141,7 @@ json_object *jd_call(const char *method, json_object *params, jd_error *err)
 
 	acc.i = methods[m].op == OP_MUL ? 1 : 0;
 	for (i = 0; i < n; i++) {
-		number x;
+		number x = {0, 0, 0};
 
 		if (to_number(operands[i], i, &x, err) < 0)
 			return NULL;
