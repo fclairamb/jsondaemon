@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.cc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, cc: gcc }
+          - { os: ubuntu-latest, cc: clang }
+          - { os: macos-latest, cc: clang }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libjson-c-dev pkg-config
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install json-c pkgconf
+
+      - name: Build
+        run: make CC=${{ matrix.cc }} WERROR=1
+
+      - name: Test
+        run: make CC=${{ matrix.cc }} WERROR=1 test
+
+  sanitizers:
+    # ASan + UBSan. Linux only: on macOS, ASan mixes up the globals of a
+    # dlclose()d plugin with those of the next one mapped at the same address.
+    name: ubuntu-latest / ASan + UBSan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libjson-c-dev pkg-config
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: make SANITIZE=1 WERROR=1 test
+
+  install:
+    name: make install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libjson-c-dev pkg-config
+
+      - name: Install, then build an out-of-tree plugin against the installed header
+        run: |
+          make install PREFIX="$RUNNER_TEMP/jd"
+          mkdir -p "$RUNNER_TEMP/plugins"
+          cp "$RUNNER_TEMP/jd/lib/jsondaemon/plugins/"*.so "$RUNNER_TEMP/plugins/"
+          cat > "$RUNNER_TEMP/echo.c" <<'C'
+          #include <jsondaemon.h>
+          const char *jd_mount(void) { return "/echo"; }
+          json_object *jd_call(const char *method, json_object *params, jd_error *err)
+          {
+                  (void)method; (void)err;
+                  return json_object_get(params);
+          }
+          C
+          cc -shared -fPIC -I"$RUNNER_TEMP/jd/include" $(pkg-config --cflags json-c) \
+             "$RUNNER_TEMP/echo.c" -o "$RUNNER_TEMP/plugins/echo.so" $(pkg-config --libs json-c)
+          "$RUNNER_TEMP/jd/bin/jsondaemon" -d "$RUNNER_TEMP/plugins" -p 18080 &
+          pid=$!
+          for i in $(seq 50); do curl -sf localhost:18080/_health && break; sleep 0.1; done
+          test "$(curl -sf -d '{"it":"works"}' localhost:18080/echo/anything)" = '{"it":"works"}'
+          test "$(curl -sf 'localhost:18080/math/add?a=40&b=2')" = '42'
+          kill "$pid"
+          wait "$pid"
