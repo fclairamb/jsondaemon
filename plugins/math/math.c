@@ -27,11 +27,11 @@ typedef struct number {
 	double d;
 } number;
 
-typedef enum op { OP_ADD, OP_SUB, OP_MUL, OP_DIV } op;
+typedef enum operation { OP_ADD, OP_SUB, OP_MUL, OP_DIV } operation;
 
 static const struct {
 	const char *name;
-	op op;
+	operation op;
 	size_t min_operands;
 	const char *help;
 } methods[] = {
@@ -46,10 +46,10 @@ static double as_double(number n)
 	return n.is_int ? (double)n.i : n.d;
 }
 
-static int apply(op op, number *acc, number x, jd_error *err)
+static int apply(operation op, number *acc, number x, jd_error *err)
 {
 	if (acc->is_int && x.is_int) {
-		int64_t r;
+		int64_t r = 0;
 		int overflow = 0;
 
 		switch (op) {
@@ -92,9 +92,11 @@ static int to_number(json_object *value, size_t index, number *out, jd_error *er
 	case json_type_int:
 		out->is_int = 1;
 		out->i = json_object_get_int64(value);
+		out->d = 0;
 		return 0;
 	case json_type_double:
 		out->is_int = 0;
+		out->i = 0;
 		out->d = json_object_get_double(value);
 		return 0;
 	default:
@@ -139,7 +141,7 @@ json_object *jd_call(const char *method, json_object *params, jd_error *err)
 
 	acc.i = methods[m].op == OP_MUL ? 1 : 0;
 	for (i = 0; i < n; i++) {
-		number x;
+		number x = {0, 0, 0};
 
 		if (to_number(operands[i], i, &x, err) < 0)
 			return NULL;
